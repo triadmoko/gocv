@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
+	"io/ioutil"
 	"math"
+	"os"
 	"sort"
 	"time"
 
@@ -132,15 +135,15 @@ func main() {
 	filePath := "./images/p1.jpg"
 	// read image from path and convert to byte
 
-	// data, err := os.ReadFile(filePath)
-	// if err != nil {
-	// 	fmt.Println("Error reading file:", err)
-	// 	return
-	// }
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
 
-	correctSkew2(filePath)
+	// correctSkew2(filePath)
 	// Probabilistic("./images/p1.jpg")
-	correctTextSkewness("./images/p1.jpg")
+	correctTextSkewness(data)
 	timeEnd := time.Now()
 	fmt.Println("Time taken:", timeEnd.Sub(timeStart))
 }
@@ -286,14 +289,20 @@ func maxIndex(values []float64) int {
 	return maxIdx
 }
 
-func correctTextSkewness(imgPath string) gocv.Mat {
-	img := gocv.IMRead(imgPath, gocv.IMReadColor)
-	if img.Empty() {
-		fmt.Println("Error reading image from:", imgPath)
+func correctTextSkewness(imgBytes []byte) gocv.Mat {
+	// img := gocv.IMRead(imgPath, gocv.IMReadColor)
+	// if img.Empty() {
+	// 	fmt.Println("Error reading image from:", imgPath)
+	// 	return gocv.NewMat()
+	// }
+	// defer img.Close()
+	img, err := gocv.IMDecode(imgBytes, gocv.IMReadColor)
+	if err != nil {
+		fmt.Println("Error reading image from:", err)
 		return gocv.NewMat()
 	}
-	defer img.Close()
 
+	defer img.Close()
 	h, w, _ := img.Rows(), img.Cols(), img.Channels()
 	xCenter, yCenter := w/2, h/2
 
@@ -307,8 +316,37 @@ func correctTextSkewness(imgPath string) gocv.Mat {
 	rotatedImg := gocv.NewMat()
 
 	gocv.WarpAffineWithParams(img, &rotatedImg, matrix, image.Pt(w, h), gocv.InterpolationLinear, gocv.BorderReplicate, color.RGBA{255, 255, 255, 0})
-	gocv.IMWrite("./images/result.jpg", rotatedImg)
+	ext := gocv.FileExt(".png")
+	fmt.Println(ext)
+	buf, err := gocv.IMEncode(ext, rotatedImg)
+	if err != nil {
+		fmt.Println("Error encoding image:", err)
+		return gocv.NewMat()
+	}
+	imgBase64 := base64.StdEncoding.EncodeToString(buf.GetBytes())
+	// write image to file from base64
+	err = writeImageFromBase64(imgBase64, "./images/result.jpg")
+	// err = os.WriteFile("./images/result.jpg", buf.GetBytes(), 0644)
+	if err != nil {
+		fmt.Println("Error writing image:", err)
+		return gocv.NewMat()
+	}
 	return rotatedImg
+}
+func writeImageFromBase64(base64Str string, filePath string) error {
+	// Decode base64 string
+	imgBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return fmt.Errorf("error decoding base64 string: %v", err)
+	}
+
+	// Write image bytes to file
+	err = ioutil.WriteFile(filePath, imgBytes, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing image to file: %v", err)
+	}
+
+	return nil
 }
 
 // getSkewedAngle calculates the skew angle of an image
