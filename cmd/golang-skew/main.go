@@ -128,7 +128,17 @@ func DetermineScore(matrix gocv.Mat, thresh gocv.Mat, width int, height int) flo
 
 func main() {
 	timeStart := time.Now()
-	// correctSkew2("./images/p1.jpg")
+	// read file from path
+	filePath := "./images/p1.jpg"
+	// read image from path and convert to byte
+
+	// data, err := os.ReadFile(filePath)
+	// if err != nil {
+	// 	fmt.Println("Error reading file:", err)
+	// 	return
+	// }
+
+	correctSkew2(filePath)
 	// Probabilistic("./images/p1.jpg")
 	correctTextSkewness("./images/p1.jpg")
 	timeEnd := time.Now()
